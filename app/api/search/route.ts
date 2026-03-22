@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+interface IndianQuote {
+  symbol: string;
+  name: string;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('q');
@@ -29,12 +34,12 @@ export async function GET(request: NextRequest) {
     const data = await response.json();
     
     // Filter for Indian stocks (NSI = NSE, BSE = BSE)
-    let indianQuotes = (data.quotes || [])
-      .filter((quote: any) => 
+    const indianQuotes: IndianQuote[] = (data.quotes || [])
+      .filter((quote: { exchange: string; symbol: string }) => 
         (quote.exchange === 'NSI' || quote.exchange === 'BSE') && 
         (quote.symbol.endsWith('.NS') || quote.symbol.endsWith('.BO'))
       )
-      .map((quote: any) => ({
+      .map((quote: { symbol: string; longname?: string; shortname?: string }) => ({
         symbol: quote.symbol,
         name: quote.longname || quote.shortname || quote.symbol,
       }));
@@ -60,7 +65,7 @@ export async function GET(request: NextRequest) {
             const exch = match[2];
             const yahooSym = exch === 'NSE' ? `${sym}.NS` : `${sym}.BO`;
             
-            if (!foundSymbols.has(yahooSym) && !indianQuotes.some((q: any) => q.symbol === yahooSym)) {
+            if (!foundSymbols.has(yahooSym) && !indianQuotes.some((q: IndianQuote) => q.symbol === yahooSym)) {
               foundSymbols.add(yahooSym);
               indianQuotes.unshift({
                 symbol: yahooSym,
@@ -78,10 +83,10 @@ export async function GET(request: NextRequest) {
     // FINAL POLISH: Specific high-priority names if still missing
     const queryLower = query.toLowerCase();
     if (indianQuotes.length <= 2) {
-      if (queryLower === 'zomato' && !indianQuotes.some((q: any) => q.symbol === 'ZOMATO.NS')) {
+      if (queryLower === 'zomato' && !indianQuotes.some((q: IndianQuote) => q.symbol === 'ZOMATO.NS')) {
         indianQuotes.unshift({ symbol: 'ZOMATO.NS', name: 'Zomato Limited' });
       }
-      if (queryLower === 'paytm' && !indianQuotes.some((q: any) => q.symbol === 'PAYTM.NS')) {
+      if (queryLower === 'paytm' && !indianQuotes.some((q: IndianQuote) => q.symbol === 'PAYTM.NS')) {
         indianQuotes.unshift({ symbol: 'PAYTM.NS', name: 'One 97 Communications (Paytm)' });
       }
     }

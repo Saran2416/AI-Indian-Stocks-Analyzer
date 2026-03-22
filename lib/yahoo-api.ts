@@ -94,7 +94,8 @@ export async function fetchStockPrice(symbol: string): Promise<StockPriceData | 
       }
     }
   } catch (err) {
-    console.error(`Error fetching quote for ${yahooSymbol}:`, (err as any)?.message || err);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`Error fetching quote for ${yahooSymbol}:`, msg);
   }
 
   return getFallbackStockPrice(yahooSymbol);
@@ -138,7 +139,8 @@ export async function fetchChartData(
       }
     }
   } catch (error) {
-    console.error(`Error fetching chart data for ${yahooSymbol}:`, (error as any)?.message || error);
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error(`Error fetching chart data for ${yahooSymbol}:`, msg);
   }
   
   return generateMockChartData();
