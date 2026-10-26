@@ -29,8 +29,10 @@ A **complete, production-ready web application** for analyzing Indian stocks usi
 
 ### 3. **Utility Libraries**
 ```
-✅ lib/stocks.ts          - Yahoo Finance integration + data fetching
-✅ lib/ai.ts              - Claude AI integration for analysis
+✅ lib/stocks.ts          - Shared stock types and helpers
+✅ lib/yahoo-api.ts       - Live Yahoo Finance quotes and charts
+✅ lib/watchlist.ts       - Market board symbols
+✅ lib/ai.ts              - Gemini / Ollama / built-in analysis
 ✅ lib/scoring.ts         - Score calculation algorithms
 ```
 
@@ -70,8 +72,8 @@ A **complete, production-ready web application** for analyzing Indian stocks usi
 - ✅ Stock search with autocomplete (30+ Indian stocks)
 - ✅ Real-time price data display
 - ✅ Trading volume and market cap
-- ✅ Interactive multi-timeframe charts (1D, 1W, 1M, 1Y, 5Y)
-- ✅ AI-powered analysis (Claude 3.5 Sonnet)
+- ✅ Live multi-timeframe charts with Area, Candles, Volume, and Returns modes plus SMA 20/50
+- ✅ AI-powered analysis (Gemini free tier / local Ollama / built-in)
 - ✅ Four-metric scoring system
   - Fundamentals (40%)
   - Technical (30%)
@@ -103,7 +105,7 @@ A **complete, production-ready web application** for analyzing Indian stocks usi
 Frontend:       Next.js 14 + React 18 + TypeScript
 Styling:        Tailwind CSS + Framer Motion
 Charts:         Recharts
-AI:             Anthropic Claude 3.5 Sonnet
+AI:             Gemini free tier / Ollama / built-in
 Data:           Yahoo Finance API
 Icons:          Lucide React
 Deployment:     Vercel-ready (Next.js native)
@@ -169,7 +171,7 @@ npm run dev
 ```bash
 npm install
 cp .env.local.example .env.local
-# Edit .env.local, add ANTHROPIC_API_KEY
+# Edit .env.local, optionally add GEMINI_API_KEY (built-in analysis needs no key)
 npm run dev
 ```
 
@@ -186,13 +188,13 @@ npm run dev
 - ✅ Framer Motion (animations)
 - ✅ Recharts (charts)
 - ✅ Next.js API Routes
-- ✅ Anthropic Claude (AI)
+- ✅ Google Gemini / local Ollama / built-in analyzer (AI)
 - ✅ Yahoo Finance API
 
 **Core Features**
 - ✅ Stock Search with autocomplete
 - ✅ Live stock data display
-- ✅ Interactive stock charts
+- ✅ Live OHLCV charts with candlesticks, volume, returns, and SMA overlays
 - ✅ AI analysis engine
 - ✅ AI score system (0-100)
 - ✅ Recommendation badges
@@ -276,8 +278,8 @@ npm run dev
 ```
 1. User searches stock
 2. API fetches real-time data
-3. AI processes data with Claude
-4. Claude analyzes:
+3. AI processes data with Gemini, Ollama, or the built-in analyzer
+4. The analyzer assesses:
    - Fundamentals (earnings, valuation)
    - Technical (momentum, trends)
    - Sentiment (market mood)
@@ -356,7 +358,7 @@ Input validation   → All user inputs checked
 ```
 1. Push code to GitHub
 2. Connect to Vercel
-3. Add ANTHROPIC_API_KEY
+3. (Optional) Add GEMINI_API_KEY for free-tier LLM analysis
 4. Deploy (automatic!)
 ```
 
@@ -397,7 +399,7 @@ Feature Info: FEATURES.md
 - Framer Motion (Animations)
 - Recharts (Data Visualization)
 - API Integration (Yahoo Finance)
-- AI Integration (Anthropic Claude)
+- AI Integration (Gemini / Ollama / built-in)
 
 ### Best Practices Demonstrated
 - Component composition
@@ -557,7 +559,7 @@ You now have a **complete, production-ready AI-powered Indian stock analyzer** w
 
 - ✅ Beautiful UI/UX design
 - ✅ Real-time stock data
-- ✅ AI analysis using Claude
+- ✅ AI analysis using Gemini, Ollama, or the built-in analyzer
 - ✅ Interactive charts
 - ✅ Professional code quality
 - ✅ Complete documentation

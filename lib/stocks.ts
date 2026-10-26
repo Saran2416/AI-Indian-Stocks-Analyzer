@@ -14,51 +14,57 @@ export interface StockPriceData {
   pe: number;
   eps: number;
   currency: string;
+  /** Timestamp of the live quote (ISO 8601). */
+  dataAsOf: string;
 }
 
 export interface ChartData {
+  /** ISO timestamp for the bar (rendered in IST by the chart). */
   date: string;
+  /** Close price. Kept as `price` for backwards compatibility with the AI analysis code. */
   price: number;
+  /** Milliseconds since epoch (used for live updates and detailed tooltips). */
+  timestamp: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+/**
+ * A lightweight second-by-second quote update. It intentionally omits fields
+ * that change slowly (market cap, P/E, EPS) so the client can merge it into an
+ * existing full quote without overwriting them with zeros.
+ */
+export interface LiveQuoteUpdate {
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  volume: number;
+  dayHigh: number;
+  dayLow: number;
+  fiftyTwoWeekHigh: number;
+  fiftyTwoWeekLow: number;
+  currency: string;
+  dataAsOf: string;
+  marketState: string;
+}
+
+export interface LiveMarketData {
+  source: string;
+  exchange: string;
+  marketState: string;
+  generatedAt: string;
+  asOf: string;
+  asOfIST: string;
+  count: number;
+  quotes: StockPriceData[];
 }
 
 // Fetching logic moved to lib/yahoo-api.ts to prevent Next.js client-side webpack errors
-
-
-export function getFallbackStockPrice(symbol: string): StockPriceData {
-  const name = symbol;
-  const base = 2500;
-  const price = Math.max(100, base + (Math.random() - 0.5) * 400);
-  const change = (Math.random() - 0.5) * 50;
-  return {
-    symbol: symbol.includes('.') ? symbol : `${symbol}.NS`,
-    name,
-    price,
-    change,
-    changePercent: (change / price) * 100,
-    marketCap: Math.round(price * 1e8),
-    volume: Math.floor(1e6 + Math.random() * 8e6),
-    dayHigh: price + Math.random() * 20,
-    dayLow: price - Math.random() * 20,
-    fiftyTwoWeekHigh: price + Math.random() * 150,
-    fiftyTwoWeekLow: price - Math.random() * 150,
-    pe: 20 + Math.random() * 10,
-    eps: 50 + Math.random() * 30,
-    currency: 'INR',
-  };
-}
-
-export function generateMockChartData(): ChartData[] {
-  const data: ChartData[] = [];
-  const basePrice = 2500;
-  for (let i = 150; i >= 0; i--) {
-    const variation = (Math.random() - 0.5) * 100;
-    data.push({
-      date: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      price: Math.max(100, basePrice + variation + (150 - i) * 2),
-    });
-  }
-  return data;
-}
 
 export function isValidIndianStock(symbol: string): boolean {
   return symbol.toUpperCase().endsWith('.NS') || symbol.toUpperCase().endsWith('.BO');

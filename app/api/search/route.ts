@@ -83,8 +83,11 @@ export async function GET(request: NextRequest) {
     // FINAL POLISH: Specific high-priority names if still missing
     const queryLower = query.toLowerCase();
     if (indianQuotes.length <= 2) {
-      if (queryLower === 'zomato' && !indianQuotes.some((q: IndianQuote) => q.symbol === 'ZOMATO.NS')) {
-        indianQuotes.unshift({ symbol: 'ZOMATO.NS', name: 'Zomato Limited' });
+      if (
+        (queryLower === 'zomato' || queryLower === 'eternal') &&
+        !indianQuotes.some((q: IndianQuote) => q.symbol === 'ETERNAL.NS')
+      ) {
+        indianQuotes.unshift({ symbol: 'ETERNAL.NS', name: 'Eternal Limited (Zomato)' });
       }
       if (queryLower === 'paytm' && !indianQuotes.some((q: IndianQuote) => q.symbol === 'PAYTM.NS')) {
         indianQuotes.unshift({ symbol: 'PAYTM.NS', name: 'One 97 Communications (Paytm)' });

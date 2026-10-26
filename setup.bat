@@ -39,8 +39,9 @@ if not exist .env.local (
     copy .env.local.example .env.local
     echo ✓ Created .env.local from .env.local.example
     echo.
-    echo ⚠️  IMPORTANT: Edit .env.local and add your ANTHROPIC_API_KEY
-    echo    You can get one from: https://console.anthropic.com
+    echo ⚠️  Optional: edit .env.local to use Google Gemini (free tier) or local Ollama
+    echo    Without a key, the app uses its built-in analyzer.
+    echo    Gemini key: https://aistudio.google.com/apikey
 ) else (
     echo ✓ .env.local already exists
 )
@@ -48,7 +49,7 @@ if not exist .env.local (
 echo.
 echo ✅ Setup complete! Next steps:
 echo.
-echo 1. Edit .env.local and add your ANTHROPIC_API_KEY
+echo 1. (Optional) Add a free Gemini key to .env.local, or use built-in analysis
 echo 2. Run: npm run dev
 echo 3. Open: http://localhost:3000
 echo.

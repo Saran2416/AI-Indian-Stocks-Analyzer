@@ -2,11 +2,13 @@
 
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown } from 'lucide-react';
+import LivePrice from '@/components/LivePrice';
 import { StockPriceData } from '@/lib/stocks';
 
 interface StockCardProps {
   stock: StockPriceData;
   isLoading?: boolean;
+  isLive?: boolean;
 }
 
 function formatMarketCap(val: number): string {
@@ -18,8 +20,22 @@ function formatMarketCap(val: number): string {
   return `₹${val.toLocaleString('en-IN')}`;
 }
 
-export default function StockCard({ stock, isLoading = false }: StockCardProps) {
+function formatQuoteTime(value?: string): string | null {
+  if (!value) return null;
+  return new Date(value).toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    dateStyle: 'medium',
+    timeStyle: 'medium',
+  });
+}
+
+export default function StockCard({
+  stock,
+  isLoading = false,
+  isLive = false,
+}: StockCardProps) {
   const isPositive = stock.change >= 0;
+  const quoteTime = formatQuoteTime(stock.dataAsOf);
 
   if (isLoading) {
     return (
@@ -44,12 +60,28 @@ export default function StockCard({ stock, isLoading = false }: StockCardProps) 
       <div className="mb-5">
         <h2 className="text-2xl font-bold text-white leading-tight">{stock.name}</h2>
         <p className="text-sm text-white/50 mt-0.5">{stock.symbol}</p>
+        {quoteTime && (
+          <p
+            className={`inline-flex items-center gap-1.5 text-xs mt-1 ${
+              isLive ? 'text-green-400/80' : 'text-amber-300/80'
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                isLive ? 'bg-green-400 animate-pulse' : 'bg-amber-400'
+              }`}
+            />
+            {isLive ? 'Live' : 'Last live quote'} · updated {quoteTime} IST
+          </p>
+        )}
       </div>
 
       {/* Price + change prominently displayed */}
       <div className="mb-6 p-4 rounded-xl bg-white/5 border border-white/10">
         <p className="text-xs text-white/40 uppercase tracking-wider mb-1">Current Price</p>
-        <p className="text-4xl font-bold text-white mb-2">₹{stock.price.toFixed(2)}</p>
+        <div className="mb-2">
+          <LivePrice value={stock.price} className="text-4xl font-bold" />
+        </div>
         <motion.div
           className={`flex items-center gap-2 text-base font-semibold px-3 py-1.5 rounded-lg w-fit ${
             isPositive

@@ -10,7 +10,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.24.3",
     "axios": "^1.6.7",
     "cheerio": "^1.2.0",
     "framer-motion": "^10.16.19",

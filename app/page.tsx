@@ -7,6 +7,8 @@ import StockCard from '@/components/StockCard';
 import StockChart from '@/components/StockChart';
 import AIScoreGauge from '@/components/AIScoreGauge';
 import RecommendationBadge from '@/components/RecommendationBadge';
+import LiveMarketPanel from '@/components/LiveMarketPanel';
+import LiveClock from '@/components/LiveClock';
 import {
   FundamentalsPanel,
   TechnicalPanel,
@@ -15,7 +17,8 @@ import {
 } from '@/components/AnalysisPanels';
 import { StockPriceData, ChartData } from '@/lib/stocks';
 import { AIAnalysisResult } from '@/lib/ai';
-import { AlertCircle, Search } from 'lucide-react';
+import { useLiveQuote } from '@/hooks/useLiveQuote';
+import { AlertCircle, Clock3 } from 'lucide-react';
 
 interface AnalysisData {
   stock: StockPriceData;
@@ -29,11 +32,28 @@ interface AnalysisData {
 const HEADER_TEXT = '📊 AI Indian Stock Analyzer';
 const TAGLINE = 'AI-powered analysis for Indian stocks with real-time data and intelligent recommendations';
 
+function analysisEngineLabel(provider: AIAnalysisResult['provider']): string {
+  switch (provider) {
+    case 'gemini':
+      return 'Google Gemini (free tier)';
+    case 'ollama':
+      return 'Local Ollama';
+    default:
+      return 'Built-in analysis (no API key)';
+  }
+}
+
 export default function Home() {
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const liveQuote = useLiveQuote({
+    symbol: analysisData?.stock.symbol ?? null,
+    initialQuote: analysisData?.stock ?? null,
+    enabled: Boolean(analysisData),
+  });
 
   const handleStockSelect = useCallback(async (symbol: string) => {
     setSelectedStock(symbol);
@@ -100,6 +120,19 @@ export default function Home() {
             <p className="text-white/60 text-lg md:text-xl max-w-2xl mx-auto">
               {TAGLINE}
             </p>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/25 text-green-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                Live data feed
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/60">
+                <Clock3 size={12} />
+                <LiveClock /> IST
+              </span>
+              <span className="text-white/35">
+                Prices poll every second while the market is open
+              </span>
+            </div>
           </div>
         </motion.header>
 
@@ -120,8 +153,25 @@ export default function Home() {
             </motion.section>
 
             {selectedStock && (
-              <div className="mb-4 text-sm text-white/60 text-center">
-                Showing analysis for: <span className="text-accent-400 font-semibold">{selectedStock}</span>
+              <div className="mb-4 text-center">
+                <div className="text-sm text-white/60">
+                  Showing analysis for: <span className="text-accent-400 font-semibold">{selectedStock}</span>
+                  {analysisData && (
+                    <span className="text-white/40">
+                      {' '}· Engine: {analysisEngineLabel(analysisData.analysis.provider)}
+                    </span>
+                  )}
+                </div>
+                {analysisData && (
+                  <div className="mt-1 flex items-center justify-center gap-1.5 text-xs text-white/40">
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        liveQuote.isLive ? 'bg-green-400 animate-pulse' : 'bg-amber-400'
+                      }`}
+                    />
+                    {liveQuote.isLive ? 'Live price' : 'Last live price'} · <LiveClock /> IST
+                  </div>
+                )}
               </div>
             )}
 
@@ -139,6 +189,14 @@ export default function Home() {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* Live market shown until a stock is analysed */}
+            {!analysisData && !isLoading && (
+              <LiveMarketPanel
+                onSelect={handleStockSelect}
+                isLoading={isLoading}
+              />
+            )}
 
             {/* Analysis Section */}
             <AnimatePresence mode="wait">
@@ -171,10 +229,24 @@ export default function Home() {
                       <StockChart
                         data={analysisData.chartData}
                         symbol={analysisData.stock.symbol}
+                        liveQuote={liveQuote.quote}
+                        isLive={liveQuote.isLive}
                       />
                     </div>
                     <div>
-                      <StockCard stock={analysisData.stock} />
+                      <StockCard
+                        stock={liveQuote.quote ?? analysisData.stock}
+                        isLive={liveQuote.isLive}
+                      />
+                      {liveQuote.error && (
+                        <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-300/80">
+                          <AlertCircle size={12} className="mt-0.5 flex-shrink-0" />
+                          Live quote paused — showing the last update. Retrying automatically.
+                        </p>
+                      )}
+                      <p className="mt-2 text-[11px] leading-relaxed text-white/40">
+                        Price checks every second while the market is open; Yahoo&apos;s NSE quote can lag a few seconds. AI scores reflect the analysis snapshot.
+                      </p>
                     </div>
                   </div>
 
@@ -261,26 +333,7 @@ export default function Home() {
                     </motion.div>
                   </div>
                 </motion.div>
-              ) : (
-                <motion.div
-                  key="empty"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-center py-20"
-                >
-                  <motion.div
-                    animate={{ scale: [1, 1.05, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="w-16 h-16 rounded-full bg-accent-500/10 border border-accent-500/30 mx-auto mb-4 flex items-center justify-center text-accent-400"
-                  >
-                    <Search size={32} />
-                  </motion.div>
-                  <p className="text-white/60 text-lg">
-                    Search for an Indian stock to get AI-powered analysis
-                  </p>
-                </motion.div>
-              )}
+              ) : null}
             </AnimatePresence>
           </div>
         </main>
@@ -300,7 +353,7 @@ export default function Home() {
               of principal.
             </div>
             <p className="text-center text-white/40 text-xs mt-6">
-              © 2024 AI Stock Analyzer. Data sourced from Yahoo Finance. Not affiliated with NSE/BSE.
+              © 2026 AI Stock Analyzer. Data sourced from Yahoo Finance. Not affiliated with NSE/BSE.
             </p>
           </div>
         </motion.footer>

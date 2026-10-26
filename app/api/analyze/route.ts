@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isValidIndianStock } from '@/lib/stocks';
 import { fetchStockPrice, fetchChartData } from '@/lib/yahoo-api';
-import { analyzeStock } from '@/lib/ai';import { calculateScoreResult } from '@/lib/scoring';
+import { analyzeStock } from '@/lib/ai';
+import { calculateScoreResult } from '@/lib/scoring';
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,13 +27,19 @@ export async function POST(request: NextRequest) {
     const stockData = await fetchStockPrice(symbol);
     if (!stockData) {
       return NextResponse.json(
-        { error: 'Unable to fetch stock data' },
-        { status: 500 }
+        { error: 'Live stock data is currently unavailable' },
+        { status: 503, headers: { 'Cache-Control': 'no-store' } }
       );
     }
 
     // Fetch chart data
     const chartData = await fetchChartData(symbol, '1y');
+    if (chartData.length === 0) {
+      return NextResponse.json(
+        { error: 'Live chart data is currently unavailable' },
+        { status: 503, headers: { 'Cache-Control': 'no-store' } }
+      );
+    }
 
     // Get AI analysis
     const aiAnalysis = await analyzeStock(stockData, chartData);
@@ -45,14 +52,17 @@ export async function POST(request: NextRequest) {
       aiAnalysis.riskScore
     );
 
-    return NextResponse.json({
-      stock: stockData,
-      chartData,
-      analysis: {
-        ...aiAnalysis,
-        ...scoreResult,
+    return NextResponse.json(
+      {
+        stock: stockData,
+        chartData,
+        analysis: {
+          ...aiAnalysis,
+          ...scoreResult,
+        },
       },
-    });
+      { headers: { 'Cache-Control': 'no-store' } }
+    );
   } catch (error) {
     console.error('API error:', error);
     return NextResponse.json(

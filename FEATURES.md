@@ -47,35 +47,42 @@
 ### 📈 3. Interactive Stock Price Charts
 
 **Multi-Timeframe Support:**
-- **1D** - Last day data with hourly candles
-- **1W** - 5-day view with hourly data
-- **1M** - 1-month chart with daily data
-- **1Y** - 1-year view with weekly data (Default)
-- **5Y** - 5-year historical with monthly data
+- **1D** - 1-minute bars (default intraday view)
+- **1W** - 5-minute bars over five trading days
+- **1M** - Hourly bars over one month
+- **1Y** - Daily bars (default view)
+- **5Y** - Weekly bars
+
+**Chart Modes:**
+- **Area** - Live price area with green/red trend coloring
+- **Candles** - OHLC candlesticks with green/red bodies
+- **Volume** - Price overlay plus per-bar volume bars
+- **Returns** - Normalized percentage return for the selected period
 
 **Chart Features:**
-- 🎨 Beautiful gradient fill under curve
-- 🔵 Blue accent line for price movement
-- 📊 Grid background for reference
-- 💡 Interactive tooltips on hover
-- 🎬 Smooth animations
-- 📱 Fully responsive
-- ♿ Accessible design
+- 🟢 Live final bar updates with the second-by-second quote
+- 🔄 Underlying Yahoo OHLCV bars refresh every 60 seconds
+- 📈 Optional SMA 20/50 overlays
+- 💡 Detailed OHLC, volume, change, return, and SMA tooltips
+- 📊 Period statistics for open, high, low, last price, average volume, and range
+- 🎨 Gradient fills, chart grid, up/down candles, and volume colors
+- 📱 Fully responsive layout with chart mode and timeframe controls
+- ♿ Accessible buttons with pressed-state labels
 
 **Technical Implementation:**
-- Recharts library
-- Yahoo Finance data source
-- Automatic data formatting
-- Timezone handling
-- Performance optimization
+- Recharts `ComposedChart` with custom candle shapes
+- Yahoo Finance live OHLCV data source
+- Latest live quote merged into the final bar only on the same trading day
+- IST timezone formatting for axes, tooltips, and live timestamps
+- Yahoo granularity selected per timeframe for maximum detail
 
 **Example Usage:**
 ```
 1. Search for "TCS"
-2. Click "1Y" to see yearly trend
-3. Hover over price points for details
-4. Switch to "1M" for detailed view
-5. Use "5Y" to see long-term trend
+2. Switch between Area, Candles, Volume, and Returns
+3. Toggle SMA 20/50 to see moving-average overlays
+4. Hover over a bar for full OHLCV and return details
+5. Change from 1D to 5Y and watch the final bar update live
 ```
 
 ---
@@ -112,11 +119,12 @@
 - Sector risks
 - Economic sensitivity
 
-**AI Provider:**
-- Anthropic Claude 3.5 Sonnet
-- Advanced language understanding
+**AI Providers (all free):**
+- Google Gemini free tier
+- Local Ollama
+- Built-in analyzer (no key required)
 - Structured JSON responses
-- Reasoning-based analysis
+- Automatic fallback when a provider is unavailable
 
 ---
 
@@ -304,7 +312,7 @@ Overall Score =
    ├─ Fetch real-time price data
    ├─ Get historical price history
    ├─ Send to AI for analysis
-   ├─ Claude analyzes data
+   ├─ Gemini / Ollama / built-in analyzer processes data
    └─ Calculate final score
 
 4. DISPLAY RESULTS
@@ -348,8 +356,9 @@ Overall Score =
 - Easy expansion for more
 
 ### AI Services
-- Anthropic Claude 3.5 Sonnet
-- Advanced language model
+- Google Gemini free tier
+- Local Ollama
+- Built-in analyzer (no API key)
 - Structured analysis
 - Consistent outputs
 

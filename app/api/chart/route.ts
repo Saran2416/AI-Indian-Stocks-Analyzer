@@ -18,7 +18,14 @@ export async function POST(request: NextRequest) {
     const safePeriod = validPeriods.includes(period) ? period : '1y';
 
     const data = await fetchChartData(symbol, safePeriod as '1d' | '1w' | '1m' | '1y' | '5y');
-    return NextResponse.json({ data });
+    if (data.length === 0) {
+      return NextResponse.json(
+        { error: 'Live chart data is currently unavailable' },
+        { status: 503, headers: { 'Cache-Control': 'no-store' } }
+      );
+    }
+
+    return NextResponse.json({ data }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     console.error('Chart API error:', error);
     return NextResponse.json({ error: 'Failed to fetch chart data' }, { status: 500 });

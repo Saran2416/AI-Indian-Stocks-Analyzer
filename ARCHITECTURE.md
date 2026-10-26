@@ -17,7 +17,7 @@
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │  ANALYSIS DISPLAY COMPONENTS                             │   │
 │  ├─ StockCard (Price & Metrics)                             │   │
-│  ├─ StockChart (Multi-timeframe)                            │   │
+│  ├─ StockChart (Multi-mode live OHLCV chart)                 │   │
 │  ├─ AIScoreGauge (0-100 visualization)                      │   │
 │  ├─ RecommendationBadge (BUY/HOLD/AVOID)                    │   │
 │  │                                                           │   │
@@ -50,10 +50,10 @@
 │                                                                   │
 └─────────────────────────────────────────────────────────────────┘
         ↓ Data Fetch              ↓ AI Analysis       ↓ Scoring
-  ┌──────────────┐          ┌──────────────┐    ┌────────────────┐
-  │ YAHOO        │          │ ANTHROPIC    │    │ SCORING ENGINE │
-  │ FINANCE API  │          │ CLAUDE AI    │    │ (lib/scoring)  │
-  └──────────────┘          └──────────────┘    └────────────────┘
+  ┌──────────────┐          ┌──────────────────┐    ┌────────────────┐
+  │ YAHOO        │          │ GEMINI / OLLAMA  │    │ SCORING ENGINE │
+  │ FINANCE API  │          │ / BUILT-IN       │    │ (lib/scoring)  │
+  └──────────────┘          └──────────────────┘    └────────────────┘
 ```
 
 ---
@@ -84,21 +84,37 @@
 │   ├── 📄 globals.css              # Global styles
 │   │
 │   └── 📂 /api
-│       └── 📂 /analyze
-│           └── 📄 route.ts         # POST /api/analyze endpoint
+│       ├── 📂 /analyze
+│       │   └── 📄 route.ts         # POST /api/analyze endpoint
+│       ├── 📂 /chart
+│       │   └── 📄 route.ts         # POST /api/chart OHLCV endpoint
+│       ├── 📂 /market
+│       │   └── 📄 route.ts         # GET /api/market live board endpoint
+│       ├── 📂 /quote
+│       │   └── 📄 route.ts         # GET /api/quote second-by-second price endpoint
+│       └── 📂 /search
+│           └── 📄 route.ts         # GET /api/search endpoint
 │
 ├── 📂 /components                  # React Components
 │   ├── 📄 StockSearch.tsx          # Search with autocomplete
-│   ├── 📄 StockCard.tsx            # Price & metrics display
-│   ├── 📄 StockChart.tsx           # Interactive price chart
+│   ├── 📄 StockCard.tsx            # Live price & metrics display
+│   ├── 📄 StockChart.tsx           # Live area/candle/volume/return chart
+│   ├── 📄 LiveMarketPanel.tsx      # 1-second live market board
+│   ├── 📄 LiveClock.tsx            # Ticking IST clock
+│   ├── 📄 LivePrice.tsx            # Green/red price tick animation
 │   ├── 📄 AIScoreGauge.tsx         # Score visualization
 │   ├── 📄 RecommendationBadge.tsx  # Recommendation display
 │   └── 📄 AnalysisPanels.tsx       # Analysis panels
 │
 ├── 📂 /lib                         # Utility Functions
-│   ├── 📄 stocks.ts                # Stock API & data
-│   ├── 📄 ai.ts                    # Claude AI integration
+│   ├── 📄 stocks.ts                # Shared data types & helpers
+│   ├── 📄 yahoo-api.ts             # Live Yahoo Finance quotes & charts
+│   ├── 📄 watchlist.ts             # Market board symbols
+│   ├── 📄 ai.ts                    # Gemini / Ollama / built-in analysis
 │   └── 📄 scoring.ts               # Score calculation
+│
+├── 📂 /hooks                       # Client Hooks
+│   └── 📄 useLiveQuote.ts          # 1-second selected-stock polling
 │
 ├── 📂 /public                      # Static assets
 │
@@ -174,10 +190,11 @@
    │  └─ Returns: price, change, marketCap, volume, PE, EPS
    │
    └─ Fetch Chart Data (Yahoo Finance)
-      └─ Returns: Array of {date, price} points
+      └─ Returns: Array of OHLCV points
+         { date, timestamp, open, high, low, close, price, volume }
 
 5. AI ANALYSIS
-   Claude 3.5 Sonnet analyzes:
+   Gemini, Ollama, or the built-in analyzer processes:
    ├─ Fundamentals (P/E, earnings, market cap)
    ├─ Technical (moving averages, momentum)
    ├─ Sentiment (price trends, volume)
@@ -196,13 +213,22 @@
 8. RESPONSE CONSTRUCTION
    {
      stock: { StockPriceData },
-     chartData: [ { date, price } ],
+     chartData: [ { date, timestamp, open, high, low, close, price, volume } ],
      analysis: { entire analysis + scores }
    }
 
 9. FRONTEND DISPLAY
    Components render analysis data with animations
    User sees complete stock analysis
+
+10. LIVE PRICE AND CHART UPDATES
+   useLiveQuote polls GET /api/quote?symbol=... every second while the market is open
+   LiveMarketPanel polls GET /api/market every second while the market is open
+   Polling slows to every 30 seconds when the market is closed
+   StockChart merges the live quote into its final OHLCV bar every second
+   StockChart refreshes the underlying Yahoo bars every 60 seconds
+   Prices and the final chart bar update in place; AI scores stay as the analysis snapshot
+   Chart modes: Area, Candles, Volume, and Period Returns, with optional SMA 20/50 overlays
 ```
 
 ---
@@ -221,10 +247,13 @@
   <StockCard>
     stock: StockPriceData
     isLoading?: boolean
+    isLive?: boolean
 
   <StockChart>
     data: ChartData[]
     symbol: string
+    liveQuote?: StockPriceData | null
+    isLive?: boolean
     isLoading?: boolean
 
   <AIScoreGauge>
@@ -277,23 +306,42 @@ Content-Type: application/json
   "stock": {
     "symbol": "TCS.NS",
     "name": "Tata Consultancy Services",
-    "price": 4150.50,
-    "change": 125.30,
-    "changePercent": 3.11,
-    "marketCap": 14500000000000,
-    "volume": 5000000,
-    "dayHigh": 4200,
-    "dayLow": 4100,
-    "fiftyTwoWeekHigh": 4300,
-    "fiftyTwoWeekLow": 3800,
-    "pe": 28.5,
-    "eps": 145.65,
-    "currency": "INR"
+    "price": 2521.00,
+    "change": -9.00,
+    "changePercent": -0.36,
+    "marketCap": 9121198768128,
+    "volume": 2123175,
+    "dayHigh": 2549.7,
+    "dayLow": 2491.6,
+    "fiftyTwoWeekHigh": 3350,
+    "fiftyTwoWeekLow": 1976.8,
+    "pe": 17.67,
+    "eps": 142.66,
+    "currency": "INR",
+    "dataAsOf": "2026-10-26T06:37:26.000Z"
   },
   "chartData": [
-    { "date": "2024-03-01", "price": 4000 },
-    { "date": "2024-03-02", "price": 4050 },
-    // ... 50 data points
+    {
+      "date": "2026-10-23T03:45:00.000Z",
+      "timestamp": 1792727100000,
+      "open": 2510.0,
+      "high": 2532.8,
+      "low": 2502.1,
+      "close": 2522.4,
+      "price": 2522.4,
+      "volume": 1946312
+    },
+    {
+      "date": "2026-10-26T03:45:00.000Z",
+      "timestamp": 1792986300000,
+      "open": 2497.3,
+      "high": 2549.7,
+      "low": 2491.6,
+      "close": 2521.0,
+      "price": 2521.0,
+      "volume": 2963706
+    }
+    // ... OHLCV bars for the selected period
   ],
   "analysis": {
     // Analysis scores
@@ -330,13 +378,44 @@ Content-Type: application/json
 }
 ```
 
+### Chart Request
+```typescript
+POST /api/chart
+Content-Type: application/json
+
+{
+  "symbol": "TCS.NS",
+  "period": "1d" // 1d | 1w | 1m | 1y | 5y
+}
+```
+
+### Chart Response (Success)
+```typescript
+{
+  "data": [
+    {
+      "date": "2026-10-26T03:45:00.000Z",
+      "timestamp": 1792986300000,
+      "open": 2497.3,
+      "high": 2522.0,
+      "low": 2497.3,
+      "close": 2507.4,
+      "price": 2507.4,
+      "volume": 76884
+    }
+  ]
+}
+```
+
+Yahoo intervals: `1d` → 1-minute, `1w` → 5-minute, `1m` → hourly, `1y` → daily, `5y` → weekly. The endpoint returns `503` when live Yahoo data is unavailable; it never generates synthetic bars.
+
 ### Response (Error)
 ```typescript
 {
   "error": "Only Indian stocks (NSE/BSE) are supported"
 }
 
-Status: 400 | 404 | 500
+Status: 400 | 404 | 500 | 503
 ```
 
 ---
@@ -351,7 +430,6 @@ Production Dependencies:
 ├─ framer-motion@10.16.19    # Animations
 ├─ recharts@2.12.6           # Charts
 ├─ axios@1.6.7               # HTTP client
-├─ @anthropic-ai/sdk@0.24.3  # Claude API
 └─ lucide-react@0.408.0      # Icons
 
 Development Dependencies:
@@ -372,7 +450,13 @@ Development Dependencies:
 
 ### Environment Variables
 ```bash
-ANTHROPIC_API_KEY=sk-ant-...  # Required for AI analysis
+# Optional — built-in analysis works without any AI key.
+GEMINI_API_KEY=...                          # Google Gemini free tier
+GEMINI_MODEL=gemini-3.5-flash
+OLLAMA_BASE_URL=http://localhost:11434      # Local Ollama (optional)
+OLLAMA_MODEL=llama3.1
+OLLAMA_TIMEOUT_MS=180000                    # Slower CPU inference allowance
+AI_PROVIDER=gemini                          # gemini | ollama | builtin
 ```
 
 ### Tailwind Customization
@@ -468,7 +552,12 @@ Local Component State:
 │  └─ error: string | null
 │
 └─ StockChart.tsx
-   └─ period: "1d" | "1w" | "1m" | "1y" | "5y"
+   ├─ period: "1d" | "1w" | "1m" | "1y" | "5y"
+   ├─ mode: "area" | "candles" | "volume" | "return"
+   ├─ showSMA: boolean
+   ├─ chartData: ChartData[] (60-second Yahoo refresh)
+   ├─ isFetching / showOverlay
+   └─ error: string | null
 
 Context/Global State:
 └─ None (kept simple)

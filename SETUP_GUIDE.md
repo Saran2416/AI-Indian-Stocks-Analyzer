@@ -2,7 +2,7 @@
 
 ## ✨ What Was Built
 
-A **production-ready web application** that analyzes Indian stocks using AI (Claude 3.5 Sonnet) with real-time data, interactive charts, and intelligent recommendations. Perfect for traders and investors who want AI-powered insights.
+A **production-ready web application** that analyzes Indian stocks using free AI options (Google Gemini free tier, local Ollama, or a built-in analyzer) with real-time data, interactive charts, and intelligent recommendations. Perfect for traders and investors who want AI-powered insights without a paid API key.
 
 ---
 
@@ -37,8 +37,8 @@ npm install
 # 2. Create .env.local
 cp .env.local.example .env.local
 
-# 3. Edit .env.local and add your API keys
-# (Open the file and add: ANTHROPIC_API_KEY=sk-ant-...)
+# 3. (Optional) Configure a free AI provider in .env.local
+#    Leave blank to use the built-in analyzer (no key needed)
 
 # 4. Run development server
 npm run dev
@@ -48,15 +48,37 @@ npm run dev
 
 ---
 
-## 🔑 Getting API Keys
+## 🔑 Free AI Options
 
-### Anthropic API Key (Required)
+No paid API key is required. Choose one of these options, or leave all AI settings blank to use the built-in analyzer.
 
-1. Go to [https://console.anthropic.com](https://console.anthropic.com)
-2. Sign up/Log in
-3. Create a new API key
-4. Copy the key starting with `sk-ant-`
-5. Paste it in `.env.local`: `ANTHROPIC_API_KEY=sk-ant-...`
+### Option A: Google Gemini (free tier, hosted)
+
+1. Go to [Google AI Studio](https://aistudio.google.com/apikey)
+2. Sign in with a Google account
+3. Create an API key (no billing required for the free tier)
+4. Add it to `.env.local`:
+   ```
+   GEMINI_API_KEY=your_key_here
+   GEMINI_MODEL=gemini-3.5-flash
+   ```
+
+### Option B: Ollama (100% local, no key)
+
+1. Install [Ollama](https://ollama.com)
+2. Pull a model: `ollama pull llama3.1`
+3. Add it to `.env.local`:
+   ```
+   OLLAMA_BASE_URL=http://localhost:11434
+   OLLAMA_MODEL=llama3.1
+   # Increase if your local CPU needs more time (default 180000 ms)
+   OLLAMA_TIMEOUT_MS=180000
+   ```
+   Local CPU inference can take a minute or more. Use a smaller model or a GPU for faster results.
+
+### Option C: Built-in analyzer (no setup)
+
+If neither option is configured, the app automatically uses its built-in rule-based analyzer with the live quote and chart data. You can also force it with `AI_PROVIDER=builtin`.
 
 ---
 
@@ -170,9 +192,9 @@ Search Autocomplete
     ↓
 API /analyze
     ↓
-Yahoo Finance API (fetch data)
+Yahoo Finance API (fetch live data)
     ↓
-Claude AI (analyze data)
+Gemini / Ollama / built-in analyzer (analyze data)
     ↓
 Scoring Engine (calculate score)
     ↓
@@ -228,7 +250,7 @@ Display Results
 
 ## 🧠 AI Analysis System
 
-### How Claude Analyzes Stocks
+### How the Analysis Works
 
 1. **Collects Data**
    - Current price and changes
@@ -301,17 +323,18 @@ Display Results
    Error: "Only Indian stocks (NSE/BSE) are supported"
    ```
 
-2. **API Unavailable**
+2. **Live Data Unavailable**
    ```
-   Error: "Unable to fetch stock data. Please try again."
-   Returns: Mock data for demo
+   Error: "Live stock data is currently unavailable"
+   Status: 503
+   Returns: An error — never mock, estimated, or stale prices
    ```
 
-3. **Network Issues**
+3. **AI Provider Unavailable**
    ```
-   Error: "An error occurred while analyzing the stock"
-   Fallback: Default analysis with safe values
+   Behaviour: Automatically falls back to the built-in analyzer
    ```
+   The response still uses the current live quote and chart data.
 
 ### Validation
 - Stock symbol validation against NSE/BSE list
@@ -355,9 +378,10 @@ git push origin main
 # - Import GitHub repo
 # - Select this project
 
-# 3. Add Environment Variable
+# 3. (Optional) Add Environment Variable
 # - Settings → Environment Variables
-# - Add: ANTHROPIC_API_KEY = sk-ant-...
+# - Add: GEMINI_API_KEY = your_free_gemini_key
+#   (skip this to use the built-in analyzer)
 
 # 4. Deploy!
 # Vercel will automatically deploy
@@ -374,7 +398,7 @@ npm start
 
 # Or use Docker
 docker build -t stock-analyzer .
-docker run -e ANTHROPIC_API_KEY=sk-ant-... stock-analyzer
+docker run -e GEMINI_API_KEY=your_free_gemini_key stock-analyzer
 ```
 
 ### Build Output
@@ -387,21 +411,16 @@ public/         # Static assets
 
 ## 🔧 Troubleshooting
 
-### Issue: "Cannot find module '@anthropic-ai/sdk'"
+### Issue: AI analysis is using built-in analysis
+
+This is expected when no AI provider is configured or the configured provider fails.
 
 **Solution:**
-```bash
-npm install @anthropic-ai/sdk
-# or
-npm ci  # Clean install
-```
-
-### Issue: "ANTHROPIC_API_KEY is undefined"
-
-**Solution:**
-1. Check `.env.local` exists
-2. Verify it has: `ANTHROPIC_API_KEY=sk-ant-...`
-3. Restart dev server: `npm run dev`
+1. For Gemini free tier, set `GEMINI_API_KEY` in `.env.local`
+2. For local Ollama, set `OLLAMA_BASE_URL` and run `ollama serve`
+3. Restart the dev server: `npm run dev`
+4. Check the browser/server logs for the provider error
+5. Leave both unset if you want to keep using the built-in analyzer
 
 ### Issue: "Stock not found" for valid Indian stock
 
@@ -449,7 +468,7 @@ Great stocks to test and analyze:
 - Moving Averages: Price trend indicator
 - Risk: Volatility and downside potential
 
-### AI & Claude
+### AI Integration (Gemini / Ollama / built-in)
 - Prompt engineering for analysis
 - JSON response parsing
 - Error handling and fallbacks
@@ -573,7 +592,7 @@ Great stocks to test and analyze:
 - **Styling**: Tailwind CSS
 - **Animations**: Framer Motion
 - **Charts**: Recharts
-- **AI**: Anthropic Claude
+- **AI**: Google Gemini free tier / local Ollama / built-in analyzer
 - **Data**: Yahoo Finance
 - **Icons**: Lucide React
 
